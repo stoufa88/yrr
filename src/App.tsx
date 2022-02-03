@@ -30,9 +30,7 @@ import { SettingsIcon } from "@chakra-ui/icons";
 
 declare const gapi: any;
 const SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
-const API_KEY = "AIzaSyARhXbbdYYC1dtv3jnS_izV47RPL1H2sgI";
-const CLIENT_ID =
-  "46865173415-6memgp1qmg3mcujigdg1fbv61one7vo4.apps.googleusercontent.com";
+
 
 const STORAGE_KEY = "tracks";
 
@@ -53,6 +51,10 @@ function App() {
   const GoogleAuth = useRef<any>(null);
 
   useEffect(() => {
+    function updateSigninStatus() {
+      setSigninStatus();
+    }
+  
     async function start() {
       // In practice, your app can retrieve one or more discovery documents.
       var discoveryUrl =
@@ -62,8 +64,8 @@ function App() {
       // Get API key and client ID from API Console.
       // 'scope' field specifies space-delimited list of access scopes.
       await gapi.client.init({
-        apiKey: API_KEY,
-        clientId: CLIENT_ID,
+        apiKey: process.env.REACT_APP_API_KEY,
+        clientId: process.env.REACT_APP_CLIENT_ID,
         discoveryDocs: [discoveryUrl],
         scope: SCOPE,
       });
@@ -103,12 +105,7 @@ function App() {
   function setSigninStatus() {
     var user = GoogleAuth.current.currentUser.get();
     var isAuthorized = user.hasGrantedScopes(SCOPE);
-    console.log(isAuthorized);
     setIsSignedIn(isAuthorized);
-  }
-
-  function updateSigninStatus() {
-    setSigninStatus();
   }
 
   useEffect(() => {
