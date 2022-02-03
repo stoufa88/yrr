@@ -127,7 +127,7 @@ function App() {
         />
       </header>
       <main>
-        <Container marginTop={8}>
+        <Container marginTop={8} minHeight={96}>
           <Flex alignItems="center" justifyContent="center">
             <Button
               onClick={() => {
