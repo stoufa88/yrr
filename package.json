@@ -1,7 +1,8 @@
 {
-  "name": "my-app",
+  "name": "yrr",
   "version": "0.1.0",
-  "private": true,
+  "license": "MIT",
+  "private": false,
   "dependencies": {
     "@chakra-ui/icons": "^1.1.1",
     "@chakra-ui/react": "^1.8.0",
