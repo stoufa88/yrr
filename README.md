@@ -2,6 +2,8 @@
 
 YRR scans your Youtube subscriptions and get latest videos.
 
+Demo: https://yrr.vercel.app/
+
 ## Features
 
 - Parser configuration can be changed
