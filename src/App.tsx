@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   createIcon,
   Box,
@@ -28,13 +28,16 @@ import parse from "./lib/parser";
 import Nav from "./ui/Nav";
 import { SettingsIcon } from "@chakra-ui/icons";
 
-declare const gapi: any;
 const SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
-
-
 const STORAGE_KEY = "tracks";
 
-const DEFAULT_CONFIG: Config = {
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
+const DEFAULT_CONFIG = {
   minViews: 100,
   minLikes: 5,
   daysAgo: 8,
@@ -48,82 +51,58 @@ function App() {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const GoogleAuth = useRef<any>(null);
 
   useEffect(() => {
-    function updateSigninStatus() {
-      setSigninStatus();
-    }
-  
-    async function start() {
-      // In practice, your app can retrieve one or more discovery documents.
-      var discoveryUrl =
-        "https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest";
-
-      // Initialize the gapi.client object, which app uses to make API requests.
-      // Get API key and client ID from API Console.
-      // 'scope' field specifies space-delimited list of access scopes.
-      await gapi.client.init({
-        apiKey: process.env.REACT_APP_API_KEY,
-        clientId: process.env.REACT_APP_CLIENT_ID,
-        discoveryDocs: [discoveryUrl],
-        scope: SCOPE,
+    setTimeout(() => {
+      /* Initialize Google Identity Services */
+      window.google.accounts.id.initialize({
+        client_id: process.env.REACT_APP_CLIENT_ID,
+        callback: handleCredentialResponse,
       });
 
-      GoogleAuth.current = gapi.auth2.getAuthInstance();
+    }, 500)
 
-      if (!GoogleAuth.current) {
-        return;
-      }
-
-      // Listen for sign-in state changes.
-      GoogleAuth.current.isSignedIn.listen(updateSigninStatus);
-
-      // Handle initial sign-in state. (Determine if user is already signed in.)
-      var user = GoogleAuth.current.currentUser.get();
-      setSigninStatus();
-      setUser(user);
+    /* Load previous tracks from localStorage */
+    if (localStorage.getItem(STORAGE_KEY)) {
+      setTracks(JSON.parse(localStorage.getItem(STORAGE_KEY) || ""));
     }
-
-    gapi.load("client", start);
   }, []);
+
+  function handleCredentialResponse(response: any) {
+    const userObject = parseJwt(response.credential);
+    setUser(userObject);
+    setIsSignedIn(true);
+  }
+
+  function parseJwt(token: string) {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    return JSON.parse(jsonPayload);
+  }
 
   function handleAuthClick() {
-    if (GoogleAuth.current.isSignedIn.get()) {
-      // User is authorized and has clicked "Sign out" button.
-      GoogleAuth.current.signOut();
+    if (isSignedIn) {
+      // Sign out
+      setUser(null);
+      setIsSignedIn(false);
     } else {
-      // User is not signed in. Start Google auth flow.
-      GoogleAuth.current.signIn();
+      // Sign in
+      window.google.accounts.id.prompt();
     }
   }
-
-  function revokeAccess() {
-    GoogleAuth.current.disconnect();
-  }
-
-  function setSigninStatus() {
-    var user = GoogleAuth.current.currentUser.get();
-    var isAuthorized = user.hasGrantedScopes(SCOPE);
-    setIsSignedIn(isAuthorized);
-  }
-
-  useEffect(() => {
-    if (localStorage.getItem("tracks")) {
-      setTracks(JSON.parse(localStorage.getItem("tracks") || ""));
-    }
-  }, []);
 
   return (
     <>
       <header>
         <Nav
           isSignedIn={isSignedIn}
-          imageUrl={
-            isSignedIn && user ? user.getBasicProfile().getImageUrl() : null
-          }
+          imageUrl={isSignedIn && user ? user.picture : null}
           onSignin={handleAuthClick}
-          onSignout={revokeAccess}
+          onSignout={handleAuthClick}
         />
       </header>
       <main>
@@ -181,7 +160,6 @@ function App() {
       <footer>
         <Box mt={6} p={4} bgColor="gray.800" color="white" textAlign="center">
           Made with Youtube Data API and Chakra UI
-
         </Box>
       </footer>
 
@@ -226,7 +204,7 @@ function App() {
             </FormControl>
 
             <FormControl marginTop={4}>
-              <FormLabel htmlFor="minViews">Days ago</FormLabel>
+              <FormLabel htmlFor="daysAgo">Days ago</FormLabel>
               <Input
                 placeholder="Days ago"
                 value={config.daysAgo}
@@ -256,10 +234,10 @@ function App() {
           </ModalFooter>
         </ModalContent>
       </Modal>
-
     </>
   );
 }
+
 
 interface FeatureProps {
   title: string;
